@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
 from typing import List, Tuple
-
+import matplotlib.dates as mdates
 
 DB_FILE = "analytics.db"
 
@@ -213,26 +213,55 @@ if st.session_state.show_analytics:
     
     chart_col3, chart_col4 = st.columns(2, gap="large")
     
+
     with chart_col3:
         st.subheader("Sales Trend Over Time")
-        
+
         if not filtered_data.empty:
-            sales_by_date = filtered_data.groupby('transaction_date')['sales_amount'].sum().sort_index()
-            
-            fig, ax = plt.subplots(figsize=(8, 5))
-            ax.plot(sales_by_date.index, sales_by_date.values, marker='o', 
-                   linewidth=2, markersize=4, color='darkgreen')
-            ax.fill_between(range(len(sales_by_date)), sales_by_date.values, alpha=0.3, color='green')
+            sales_by_date = (
+                filtered_data.groupby('transaction_date')['sales_amount']
+                .sum()
+                .sort_index()
+            )
+
+        # 🔴 Convert to datetime (VERY IMPORTANT)
+            sales_by_date.index = pd.to_datetime(sales_by_date.index)
+
+            fig, ax = plt.subplots(figsize=(10, 5))
+
+            ax.plot(
+                sales_by_date.index,
+                sales_by_date.values,
+                marker='o',
+                linewidth=2,
+                markersize=4,
+                color='darkgreen'
+            )
+
+            ax.fill_between(
+                sales_by_date.index,
+                sales_by_date.values,
+                alpha=0.3,
+                color='green'
+            )
+
             ax.set_title('Sales Trend Over Time', fontsize=12, fontweight='bold')
             ax.set_xlabel('Date', fontsize=10)
             ax.set_ylabel('Sales Amount ($)', fontsize=10)
-            ax.tick_params(axis='x', rotation=45)
+
+        # ⭐ MAGIC FIX — Auto format date ticks
+            locator = mdates.AutoDateLocator(minticks=5, maxticks=8)
+            formatter = mdates.DateFormatter("%d %b")
+
+            ax.xaxis.set_major_locator(locator)
+            ax.xaxis.set_major_formatter(formatter)
+
+            plt.xticks(rotation=45)
             plt.tight_layout()
-            
+
             st.pyplot(fig)
         else:
             st.warning("No data available")
-   
     with chart_col4:
         st.subheader("Quantity by Region")
         
@@ -249,7 +278,7 @@ if st.session_state.show_analytics:
             st.pyplot(fig)
         else:
             st.warning("No data available")
-    
+
     st.markdown("---")
     st.subheader("Top 10 Partner Entities by Sales")
     
